@@ -117,17 +117,17 @@ fn perform_install(install_dir: &Path) -> Result<(), String> {
 fn perform_uninstall(install_dir: &Path, key_dir: &Path) -> Result<(), String> {
     unregister_native_messaging_manifest();
 
-    if key_dir.exists() {
-        if let Err(e) = std::fs::remove_dir_all(key_dir) {
-            eprintln!("Warning: failed to remove keys directory: {e}");
-        }
+    if key_dir.exists()
+        && let Err(e) = std::fs::remove_dir_all(key_dir)
+    {
+        eprintln!("Warning: failed to remove keys directory: {e}");
     }
 
     let manifest_path = install_dir.join(MANIFEST_NAME);
-    if manifest_path.exists() {
-        if let Err(e) = std::fs::remove_file(&manifest_path) {
-            eprintln!("Warning: failed to remove manifest: {e}");
-        }
+    if manifest_path.exists()
+        && let Err(e) = std::fs::remove_file(&manifest_path)
+    {
+        eprintln!("Warning: failed to remove manifest: {e}");
     }
 
     if let Ok(cur) = env::current_exe() {
@@ -144,10 +144,10 @@ fn perform_uninstall(install_dir: &Path, key_dir: &Path) -> Result<(), String> {
             Ok(s) => HSTRING::from(s),
             Err(_) => default_key_name(),
         };
-        if let Ok(key) = provider.open_key(key_name) {
-            if let Err(e) = key.delete() {
-                eprintln!("Warning: failed to delete CNG key: {e}");
-            }
+        if let Ok(key) = provider.open_key(key_name)
+            && let Err(e) = key.delete()
+        {
+            eprintln!("Warning: failed to delete CNG key: {e}");
         }
     }
 
@@ -198,22 +198,22 @@ fn list_keys_menu(kmgr: &KeyManager) -> Result<(), String> {
             let mut items = listed.clone();
             items.push("<Back>".to_string());
             let sel = Select::new().items(&items).default(0).interact();
-            if let Ok(idx) = sel {
-                if idx < listed.len() {
-                    let selected = &listed[idx];
-                    let actions = vec!["Export", "Delete", "Back"];
-                    if let Ok(a) = Select::new().items(&actions).default(0).interact() {
-                        match a {
-                            0 => match kmgr.export_key(selected) {
-                                Ok(k) => println!("{k}"),
-                                Err(e) => eprintln!("Failed to export key: {e}"),
-                            },
-                            1 => match kmgr.delete_key(selected) {
-                                Ok(_) => println!("Key deleted."),
-                                Err(e) => eprintln!("Failed to delete key: {e}"),
-                            },
-                            _ => {}
-                        }
+            if let Ok(idx) = sel
+                && idx < listed.len()
+            {
+                let selected = &listed[idx];
+                let actions = vec!["Export", "Delete", "Back"];
+                if let Ok(a) = Select::new().items(&actions).default(0).interact() {
+                    match a {
+                        0 => match kmgr.export_key(selected) {
+                            Ok(k) => println!("{k}"),
+                            Err(e) => eprintln!("Failed to export key: {e}"),
+                        },
+                        1 => match kmgr.delete_key(selected) {
+                            Ok(_) => println!("Key deleted."),
+                            Err(e) => eprintln!("Failed to delete key: {e}"),
+                        },
+                        _ => {}
                     }
                 }
             }

@@ -4,15 +4,12 @@
 use crate::proto::EncString;
 use aes::{
     Aes256,
-    cipher::{
-        BlockDecryptMut, BlockEncryptMut, KeyIvInit, block_padding::Pkcs7,
-        generic_array::GenericArray,
-    },
+    cipher::{BlockModeDecrypt, BlockModeEncrypt, KeyIvInit, block_padding::Pkcs7},
 };
 use anyhow::{Result, anyhow};
 use base64::Engine;
-use hmac::{Hmac, Mac};
-use rand::{Rng, RngCore};
+use hmac::{Hmac, KeyInit, Mac};
+use rand::{Rng, RngExt};
 use rsa::{Oaep, RsaPublicKey, pkcs8::DecodePublicKey};
 use sha1::Sha1;
 use sha2::Sha256;
@@ -30,12 +27,12 @@ pub fn rsa_encrypt(public_key_b64: &str, message: &[u8]) -> Result<String> {
     let public_key = base64_decode(public_key_b64)?;
     let public_key = RsaPublicKey::from_public_key_der(&public_key)?;
     let mut rng = rand::rng();
-    let padding = Oaep::new::<Sha1>();
+    let padding = Oaep::<Sha1>::new();
     let ct = public_key.encrypt(&mut rng, padding, message)?;
     Ok(base64_encode(&ct))
 }
 
-pub fn generate_mac(mac_key: &[u8; 32], iv: &[u8], data: &[u8]) -> Result<[u8; 32]> {
+pub fn generate_mac(mac_key: &[u8; 32], iv: &[u8; 16], data: &[u8]) -> Result<[u8; 32]> {
     let mut hmac = Hmac::<Sha256>::new_from_slice(mac_key).unwrap();
     hmac.update(iv);
     hmac.update(data);
@@ -64,23 +61,20 @@ impl Aes256CbcHmacKey {
         key_vec
     }
 
-    pub fn decrypt(&self, iv: &[u8], mac: &[u8], data: &[u8]) -> Result<Vec<u8>> {
+    pub fn decrypt(&self, iv: &[u8; 16], mac: &[u8; 32], data: &[u8]) -> Result<Vec<u8>> {
         let res = generate_mac(&self.mac_key, iv, data)?;
         if res.ct_ne(mac).into() {
             return Err(anyhow!("MAC verification failed"));
         }
-        let key = GenericArray::from_slice(&self.enc_key);
-        let iv = GenericArray::from_slice(iv);
-        cbc::Decryptor::<Aes256>::new(key, iv)
-            .decrypt_padded_vec_mut::<Pkcs7>(data)
+        cbc::Decryptor::<Aes256>::new(&self.enc_key.into(), iv.into())
+            .decrypt_padded_vec::<Pkcs7>(data)
             .map_err(|e| anyhow!("AES decrypt error: {:?}", e))
     }
 
     pub fn encrypt(&self, msg: &[u8]) -> Result<EncString> {
         let iv = rand::rng().random::<[u8; 16]>();
-        let key = GenericArray::from_slice(&self.enc_key);
-        let data =
-            cbc::Encryptor::<Aes256>::new(key, &iv.into()).encrypt_padded_vec_mut::<Pkcs7>(msg);
+        let data = cbc::Encryptor::<Aes256>::new(&self.enc_key.into(), &iv.into())
+            .encrypt_padded_vec::<Pkcs7>(msg);
         let mac = generate_mac(&self.mac_key, &iv, &data)?;
 
         Ok(EncString::new(&data, &iv, &mac))

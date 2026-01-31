@@ -4,7 +4,7 @@
 use crate::crypto::{base64_decode, base64_encode};
 use anyhow::Result;
 use serde::{Deserialize, Serialize, Serializer};
-use std::time::SystemTime;
+use std::{fmt::Display, time::SystemTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncString {
@@ -16,7 +16,7 @@ pub struct EncString {
 }
 
 impl EncString {
-    pub fn new(data: &[u8], iv: &[u8], mac: &[u8]) -> Self {
+    pub fn new(data: &[u8], iv: &[u8; 16], mac: &[u8; 32]) -> Self {
         Self {
             enc_type: 2,
             data: base64_encode(data),
@@ -38,9 +38,13 @@ impl EncString {
     }
 }
 
-impl ToString for EncString {
-    fn to_string(&self) -> String {
-        format!("{}.{}|{}|{}", self.enc_type, self.iv, self.data, self.mac)
+impl Display for EncString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}.{}|{}|{}",
+            self.enc_type, self.iv, self.data, self.mac
+        )
     }
 }
 

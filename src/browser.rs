@@ -100,8 +100,8 @@ fn parse_message(msg: &[u8]) -> Result<()> {
         handle_message(
             app_id,
             from_slice(&SHARED_SECRET.wait().decrypt(
-                &enc_str.iv()?,
-                &enc_str.mac()?,
+                &enc_str.iv()?.as_slice().try_into()?,
+                &enc_str.mac()?.as_slice().try_into()?,
                 &enc_str.data()?,
             )?)?,
         )

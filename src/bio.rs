@@ -23,13 +23,13 @@ pub fn authenticate_with_biometrics() -> bool {
                 owner_hwnd,
                 &HSTRING::new(),
             )
-            .is_ok_and(|async_op| async_op.get() == Ok(UserConsentVerificationResult::Verified))
+            .is_ok_and(|async_op| async_op.join() == Ok(UserConsentVerificationResult::Verified))
     }
 }
 
 pub fn get_biometrics_status() -> i32 {
     UserConsentVerifier::CheckAvailabilityAsync().map_or(5, |async_op| {
-        async_op.get().map_or(5, |availability| {
+        async_op.join().map_or(5, |availability| {
             #[allow(non_snake_case)]
             match availability {
                 UserConsentVerifierAvailability::Available => 0,

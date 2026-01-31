@@ -57,10 +57,10 @@ impl KeyManager {
         if self.bw_key_directory.exists() {
             for entry in read_dir(&self.bw_key_directory)? {
                 let entry = entry?;
-                if entry.file_type()?.is_file() {
-                    if let Some(name) = entry.file_name().to_str() {
-                        keys.push(name.to_string());
-                    }
+                if entry.file_type()?.is_file()
+                    && let Some(name) = entry.file_name().to_str()
+                {
+                    keys.push(name.to_string());
                 }
             }
         }
