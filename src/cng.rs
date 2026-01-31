@@ -148,7 +148,10 @@ impl CngKey {
     }
 
     pub fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
-        if get_biometrics_status() == 0 && !authenticate_with_biometrics() {
+        // Ask the user to confirm decryption via biometrics
+        if get_biometrics_status() != 0 {
+            bail!("Biometric authentication not available");
+        } else if !authenticate_with_biometrics() {
             bail!("Biometric authentication failed");
         }
         unsafe {
